@@ -1,7 +1,7 @@
 #include <SoftwareSerial.h>
-//#include <Servo.h>
+#include <Servo.h>
 
-#define ENA 9
+#define ENA 6
 #define IN1 7
 #define IN2 8
 
@@ -29,7 +29,7 @@ void steerWheel(int);
 // 블루투스 모듈 설정
 SoftwareSerial BTSerial(BTRX, BTTX);
 
-//Servo myServo;
+Servo myServo;
 int servo_value_init = 90;
 int servo_value = 90;
 
@@ -42,17 +42,19 @@ unsigned long last_throttle_time = 0;
 int motor_speed = 0;
 int steering = 127;
 unsigned long current_time = 0;
-byte steering_value = 0;
+signed char steering_value = 0;
 
 void setup() {
   Serial.begin(9600);
   BTSerial.begin(9600);
 
+  myServo.attach(3);
+  myServo.write(90);
+
   pinMode(ENA,OUTPUT);
   pinMode(IN1,OUTPUT);
   pinMode(IN2,OUTPUT);
 
-  //myServo.attach(5);
 
   stopMotor();
   Serial.println("Turned on");
@@ -120,7 +122,7 @@ void loop() {
         }
 
         // steering 구현
-        //myServo.write(90+(int)steering_value/10);
+        myServo.write(90+steering_value/2);
 
       } 
 
@@ -145,7 +147,7 @@ void loop() {
             driveMotor(motor_speed);          
           }
           while (!Serial.available());
-          byte steering_value = Serial.read();
+          steering_value = Serial.read();
           Serial.print("Steering is ");
           Serial.println(steering_value);
           steering = (int)steering_value;
