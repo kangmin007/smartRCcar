@@ -40,6 +40,11 @@ long prevT = 0;
 int posPrev = 0;
 volatile int pos_i = 0;
 
+// 필터링 관련
+#define numReads 10
+int velocityValues[numReads];
+int velocitySum = 0;
+
 
 
 // 서보모터 관련
@@ -86,12 +91,24 @@ void loop() {
   }
   long currT = micros();
   float deltaT = ((float) (currT-prevT))/1.0e6;
-  float velocity1 = (pos-posPrev)/deltaT;
+  float velocity = (pos-posPrev)/deltaT;
   posPrev = pos;
   prevT = currT;
-  //Serial.println(velocity1);
+  //Serial.println(velocity);
+  delay(30);
 
-
+  
+  // 필터링 관련 코드
+  for(int k=0; k<numReads-1; k++){
+    velocityValues[k] = velocityValues[k+1];
+  }
+  velocityValues[numReads-1] = (int)velocity;
+  velocitySum = 0;
+  for(int k=0; k<numReads; k++){
+    velocitySum += velocityValues[k];
+  }
+  int velocityAverage = velocitySum / numReads;
+  Serial.println(velocityAverage);
 
 
       
