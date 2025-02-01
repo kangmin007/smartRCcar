@@ -1,11 +1,16 @@
 #include <SoftwareSerial.h>
 #include <Servo.h>
+#include <util/atomic.h>
+
+
+#define ENCODER_A 2
+#define ENCODER_B 5
 
 #define ENA 6
 #define IN1 7
 #define IN2 8
 
-#define INIT_MOTORSPEED 50
+#define INIT_MOTORSPEED 35
 #define INIT_MAX_MOTORSPEED 100
 
 
@@ -17,18 +22,27 @@
 #define NO_CONTROL 0
 #define FORWARD 1
 #define BACKWARD 2
-#define STOP 3
+#define EMERGENCYSTOP 3
+#define BRAKE 4
 
 #define BTRX 12
 #define BTTX 13
 
 void driveMotor(int);
-void stopMotor();
+void EmergencyStopMotor();
 void steerWheel(int);
 
 // 블루투스 모듈 설정
 SoftwareSerial BTSerial(BTRX, BTTX);
 
+// dc모터 엔코더 관련
+long prevT = 0;
+int posPrev = 0;
+volatile int pos_i = 0;
+
+
+
+// 서보모터 관련
 Servo myServo;
 int servo_value_init = 90;
 int servo_value = 90;
@@ -51,17 +65,37 @@ void setup() {
   myServo.attach(3);
   myServo.write(90);
 
+  pinMode(ENCODER_A,INPUT);
+  pinMode(ENCODER_B,INPUT);
   pinMode(ENA,OUTPUT);
   pinMode(IN1,OUTPUT);
   pinMode(IN2,OUTPUT);
 
+  attachInterrupt(digitalPinToInterrupt(ENCODER_A),readEncoder,RISING);
 
-  stopMotor();
+  EmergencyStopMotor();
   Serial.println("Turned on");
 }
 
 void loop() {
       if (Serial.available()) raspcode = 1;
+
+      // 모터 엔코더 관련 코드
+      int pos = 0;
+      ATOMIC_BLOCK(ATOMIC_RESTORESTATE){
+        pos = pos_i;
+      }
+      long currT = micros();
+      float deltaT = ((float) (currT-prevT))/1.0e6;
+      float velocity1 = (pos-posPrev)/deltaT;
+      posPrev = pos;
+      prevT = currT;
+      //Serial.println(velocity1);
+      //delay(50);
+
+
+
+
       
       // 앱이 조종
       if (raspcode == 0) {
@@ -116,8 +150,11 @@ void loop() {
             if (-INIT_MOTORSPEED < motor_speed) motor_speed = -INIT_MOTORSPEED;
             if (motor_speed < -255) motor_speed = -255;
             driveMotor(motor_speed);
-          } else {
-            stopMotor();
+          } else if (last_throttle_value == EMERGENCYSTOP) {
+            EmergencyStopMotor();
+          } else if (last_throttle_value == BRAKE){
+            if (motor_speed>0) motor_speed = max(motor_speed-3,0);
+            if (motor_speed<0) motor_speed = min(motor_speed+3,0);
           }
         }
 
@@ -155,6 +192,7 @@ void loop() {
       }
 }
 
+
 void driveMotor(int speed){
   // speed : -255 ~ 255
   if (speed >= 0) {
@@ -169,7 +207,7 @@ void driveMotor(int speed){
 }
 
 
-void stopMotor() {
+void EmergencyStopMotor() {
   digitalWrite(IN1,HIGH);
   digitalWrite(IN2,HIGH);
   analogWrite(ENA,0);
@@ -178,4 +216,15 @@ void stopMotor() {
 
 void steerWheel(int angle) {
   (void)0;
+}
+
+void readEncoder(){
+  int b = digitalRead(ENCODER_B);
+  int increment = 0;
+  if(b>0){
+    pos_i--;
+  }
+  else{
+    pos_i++;
+  }
 }
