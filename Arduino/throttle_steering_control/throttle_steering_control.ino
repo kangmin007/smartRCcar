@@ -54,7 +54,6 @@ byte curr_throttle_value = 0;
 byte last_throttle_value = 0;
 unsigned long last_throttle_time = 0;
 int motor_speed = 0;
-int steering = 127;
 unsigned long current_time = 0;
 signed char steering_value = 0;
 
@@ -90,8 +89,7 @@ void loop() {
   float velocity1 = (pos-posPrev)/deltaT;
   posPrev = pos;
   prevT = currT;
-  Serial.println(velocity1);
-  delay(50);
+  //Serial.println(velocity1);
 
 
 
@@ -100,7 +98,7 @@ void loop() {
   // 앱이 조종
   if (raspcode == 0) {
     // 앱의 조종 값 갱신
-    if(BTSerial.available()) {
+    if(BTSerial.available() >= 2) {
 
       // 1로 시작하면 throttle 데이터
       if (BTSerial.read() == 1) {
@@ -178,6 +176,9 @@ void loop() {
         while(!Serial.available());
         curr_throttle_value = Serial.read();
         last_throttle_time = 0;
+      } else {
+        while(!Serial.available());
+        steering_value = Serial.read();
       }
     }
     current_time = millis();
@@ -212,6 +213,8 @@ void loop() {
         driveMotor(motor_speed);
       }
     }
+
+    myServo.write(90+steering_value/2);
   }
 }
 
