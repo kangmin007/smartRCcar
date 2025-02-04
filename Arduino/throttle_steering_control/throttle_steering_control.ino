@@ -2,16 +2,23 @@
 #include <Servo.h>
 #include <util/atomic.h>
 
-
+// DC 모터 엔코더 핀
 #define ENCODER_A 2
 #define ENCODER_B 5
 
+// DC 모터 핀
 #define ENA 6
 #define IN1 7
 #define IN2 8
 
+// 블루투스 관련 핀 (app inventor <-> arduino)
+#define BTRX 12
+#define BTTX 13
+SoftwareSerial BTSerial(BTRX, BTTX);
+
+// 정지 상태에서 forward/backward 눌렀을 때의 속도
 #define INIT_MOTORSPEED 35
-#define INIT_MAX_MOTORSPEED 100
+//#define INIT_MAX_MOTORSPEED 100
 
 
 // 모터 속도 갱신 주기
@@ -25,15 +32,9 @@
 #define EMERGENCYSTOP 3
 #define BRAKE 4
 
-#define BTRX 12
-#define BTTX 13
 
-void driveMotor(int);
-void EmergencyStopMotor();
-void steerWheel(int);
 
-// 블루투스 모듈 설정
-SoftwareSerial BTSerial(BTRX, BTTX);
+
 
 // dc모터 엔코더 관련
 long prevT = 0;
@@ -53,6 +54,7 @@ int servo_value_init = 90;
 int servo_value = 90;
 
 
+// 라즈베리파이에 권한 위임시 1
 int raspcode = 0;
 
 byte curr_throttle_value = 0;
@@ -66,7 +68,7 @@ void setup() {
   Serial.begin(9600);
   BTSerial.begin(9600);
 
-  myServo.attach(3);
+  myServo.attach(10);
   myServo.write(90);
 
   pinMode(ENCODER_A,INPUT);
@@ -107,8 +109,7 @@ void loop() {
   for(int k=0; k<numReads; k++){
     velocitySum += velocityValues[k];
   }
-  int velocityAverage = velocitySum / numReads;
-  Serial.println(velocityAverage);
+  int velocityAverage = velocitySum / numReads;  
 
 
       
@@ -141,7 +142,7 @@ void loop() {
 
     current_time = millis();
     
-    // throttle 구현
+    // throttle 구현 (앱)
     if (current_time - last_throttle_time > (unsigned long)UPDATE_INTERVAL) {
       last_throttle_time = current_time;
       if (curr_throttle_value == NO_CONTROL) {
@@ -157,12 +158,14 @@ void loop() {
         }
       } else if (curr_throttle_value == FORWARD) {
         motor_speed += 1;
-        if (INIT_MOTORSPEED > motor_speed) motor_speed = INIT_MOTORSPEED;
+        //if (motor_speed < 0) motor_speed += 1;
+        if ((INIT_MOTORSPEED > motor_speed) && (motor_speed > -INIT_MOTORSPEED)) motor_speed = INIT_MOTORSPEED;
+        
         if (motor_speed > 255) motor_speed = 255;
         driveMotor(motor_speed);
       } else if (curr_throttle_value == BACKWARD) {
         motor_speed -= 1;
-        if (-INIT_MOTORSPEED < motor_speed) motor_speed = -INIT_MOTORSPEED;
+        if ((-INIT_MOTORSPEED < motor_speed) && (motor_speed < INIT_MOTORSPEED) ) motor_speed = -INIT_MOTORSPEED;
         if (motor_speed < -255) motor_speed = -255;
         driveMotor(motor_speed);
       } else if (curr_throttle_value == EMERGENCYSTOP) {
@@ -186,6 +189,7 @@ void loop() {
   else {
     if (Serial.available()) {
       byte code = Serial.read();
+      Serial.print(code); 
       if (code == 255) {
         raspcode = 0;
         return;
@@ -214,12 +218,12 @@ void loop() {
         }
       } else if (curr_throttle_value == FORWARD) {
         motor_speed += 1;
-        if (INIT_MOTORSPEED > motor_speed) motor_speed = INIT_MOTORSPEED;
+        if ((INIT_MOTORSPEED > motor_speed) && (motor_speed > -INIT_MOTORSPEED)) motor_speed = INIT_MOTORSPEED;
         if (motor_speed > 255) motor_speed = 255;
         driveMotor(motor_speed);
       } else if (curr_throttle_value == BACKWARD) {
         motor_speed -= 1;
-        if (-INIT_MOTORSPEED < motor_speed) motor_speed = -INIT_MOTORSPEED;
+        if ((-INIT_MOTORSPEED < motor_speed) && (motor_speed < INIT_MOTORSPEED)) motor_speed = -INIT_MOTORSPEED;
         if (motor_speed < -255) motor_speed = -255;
         driveMotor(motor_speed);
       } else if (curr_throttle_value == EMERGENCYSTOP) {
@@ -257,9 +261,6 @@ void EmergencyStopMotor() {
   motor_speed = 0;
 }
 
-void steerWheel(int angle) {
-  (void)0;
-}
 
 void readEncoder(){
   int b = digitalRead(ENCODER_B);
