@@ -118,7 +118,7 @@ void loop() {
   if (raspcode == 0) {
     // 앱의 조종 값 갱신
     if(BTSerial.available() >= 2) {
-      byte btread = BTSerial.read()
+      byte btread = BTSerial.read();
       // 1로 시작하면 throttle 데이터
       if (btread == 1) {
         while (!BTSerial.available()); // 얘는 왜 있는거지?
@@ -143,7 +143,14 @@ void loop() {
       else if (btread == 2) {
         while (!BTSerial.available());
         parking_value = BTSerial.read();
-        Serial.write(1) 
+        Serial.write(1);
+        while (!Serial.available());
+        if (Serial.read() == 1) {
+          BTSerial.write(1);
+        } else {
+          byte a = 0;
+          BTSerial.write(a);
+        }
       }
     }
 
