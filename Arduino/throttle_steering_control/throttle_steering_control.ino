@@ -59,6 +59,7 @@ int raspcode = 0;
 
 byte curr_throttle_value = 0;
 byte last_throttle_value = 0;
+byte parking_value = 0;
 unsigned long last_throttle_time = 0;
 int motor_speed = 0;
 unsigned long current_time = 0;
@@ -80,7 +81,7 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(ENCODER_A),readEncoder,RISING);
 
   EmergencyStopMotor();
-  Serial.println("Turned on");
+  //Serial.println("Turned on");
 }
 
 void loop() {
@@ -117,9 +118,9 @@ void loop() {
   if (raspcode == 0) {
     // 앱의 조종 값 갱신
     if(BTSerial.available() >= 2) {
-
+      byte btread = BTSerial.read()
       // 1로 시작하면 throttle 데이터
-      if (BTSerial.read() == 1) {
+      if (btread == 1) {
         while (!BTSerial.available()); // 얘는 왜 있는거지?
 
         curr_throttle_value = BTSerial.read();
@@ -127,16 +128,22 @@ void loop() {
         last_throttle_time = 0;
           //last_throttle_value = curr_throttle_value;
         //}
-        Serial.print("Throttle is ");
-        Serial.println(curr_throttle_value);
+        //Serial.print("Throttle is ");
+        //Serial.println(curr_throttle_value);
       } 
       
       // 0으로 시작하면 steering 데이터
-      else {
+      else if (btread == 0) {
         while (!BTSerial.available());
         steering_value = BTSerial.read();
-        Serial.print("Steering is ");
-        Serial.println(steering_value);
+        //Serial.print("Steering is ");
+        //Serial.println(steering_value);
+      }
+
+      else if (btread == 2) {
+        while (!BTSerial.available());
+        parking_value = BTSerial.read();
+        Serial.write(1) 
       }
     }
 
@@ -189,7 +196,7 @@ void loop() {
   else {
     if (Serial.available()) {
       byte code = Serial.read();
-      Serial.print(code); 
+      //Serial.print(code); 
       if (code == 255) {
         raspcode = 0;
         return;
