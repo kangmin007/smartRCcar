@@ -190,6 +190,68 @@ void loop() {
           steering = (int)steering_value;
         }
       }
+<<<<<<< Updated upstream
+=======
+    }
+
+    // steering 구현
+    myServo.write(90+steering_value/2);
+
+  } 
+
+  // 라즈베리파이에 조종 권한 위임
+  else {
+    if (Serial.available()) {
+      byte code = Serial.read();
+      Serial.print(code); 
+      if (code == 255) {
+        raspcode = 0;
+        return;
+      } else if (code == 1) {
+        while(!Serial.available());
+        curr_throttle_value = Serial.read();
+        last_throttle_time = 0;
+      } else {
+        while(!Serial.available());
+        steering_value = Serial.read();
+      }
+    }
+    current_time = millis();
+    if (current_time - last_throttle_time > (unsigned long)UPDATE_INTERVAL) {
+      last_throttle_time = current_time;
+      if (curr_throttle_value == NO_CONTROL) {
+        if (motor_speed >= 0) {
+          motor_speed -= 1;
+          if (motor_speed < 0) motor_speed = 0;
+          driveMotor(motor_speed);
+        } else {
+          motor_speed += 1;
+          if (motor_speed > 0) motor_speed = 0;              
+        
+          driveMotor(motor_speed);
+        }
+      } else if (curr_throttle_value == FORWARD) {
+        motor_speed += 1;
+        if ((INIT_MOTORSPEED > motor_speed) && (motor_speed > -INIT_MOTORSPEED)) motor_speed = INIT_MOTORSPEED;
+        if (motor_speed > 255) motor_speed = 255;
+        driveMotor(motor_speed);
+      } else if (curr_throttle_value == BACKWARD) {
+        motor_speed -= 1;
+        if ((-INIT_MOTORSPEED < motor_speed) && (motor_speed < INIT_MOTORSPEED)) motor_speed = -INIT_MOTORSPEED;
+        if (motor_speed < -255) motor_speed = -255;
+        driveMotor(motor_speed);
+      } else if (curr_throttle_value == EMERGENCYSTOP) {
+        EmergencyStopMotor();
+      } else if (curr_throttle_value == BRAKE){
+        if (motor_speed>0) motor_speed = max(motor_speed-3,0);
+        if (motor_speed<0) motor_speed = min(motor_speed+3,0);
+        driveMotor(motor_speed);
+      }
+    }
+
+    myServo.write(steering_value);
+  }
+>>>>>>> Stashed changes
 }
 
 
