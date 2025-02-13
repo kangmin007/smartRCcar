@@ -143,14 +143,34 @@ void loop() {
       else if (btread == 2) {
         while (!BTSerial.available());
         parking_value = BTSerial.read();
-        Serial.write(1);
-        while (!Serial.available());
-        if (Serial.read() == 1) {
-          BTSerial.write(1);
-        } else {
-          byte a = 0;
-          BTSerial.write(a);
+        Serial.write(parking_value);
+        while (1) {
+          if (Serial.available()) {
+            byte code = Serial.read();
+            if (code == 255) {
+              BTSerial.write(1);
+              raspcode = 0;
+              break;
+            } else if (code == 254) {
+              BTSerial.write((byte)0);
+              raspcode = 0;
+              break;
+            } else if (code == 3) {
+              while(!Serial.available());
+              byte steering_value = Serial.read();
+              myServo.write(steering_value);
+            } else if (code == 1) {
+              while(!Serial.available());
+              byte throttle_value = Serial.read();
+              driveMotor((int)throttle_value);
+            } else if  (code == 2) {
+              while(!Serial.available());
+              byte throttle_value = Serial.read();
+              driveMotor(-(int)throttle_value);
+            }
+          }
         }
+
       }
     }
 
