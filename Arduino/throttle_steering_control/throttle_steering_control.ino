@@ -192,6 +192,7 @@ void loop() {
       Serial.print(code); 
       if (code == 255) {
         raspcode = 0;
+        clearBluetoothBuffer();
         return;
       } else if (code == 1) {
         while(!Serial.available());
@@ -270,5 +271,12 @@ void readEncoder(){
   }
   else{
     pos_i++;
+  }
+}
+
+void clearBluetoothBuffer(){
+  delay(10);
+  while(BTSerial.available()){
+    BTSerial.read();
   }
 }
